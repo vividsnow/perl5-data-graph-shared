@@ -1,0 +1,9 @@
+Revision history for Data::Graph::Shared
+
+0.02  2026-04-17
+    - Atomic bitmap+count RMW; add remove_node_full (O(N+E))
+    - Lifecycle parity: memfd/from_fd/sync/unlink/eventfd*
+    - new_from_fd: strict layout validation (rejects crafted fd)
+
+0.01  2026-04-12
+    - Initial release
