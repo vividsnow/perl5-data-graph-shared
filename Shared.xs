@@ -12,6 +12,19 @@
     if (!h) croak("Attempted to use a destroyed Data::Graph::Shared object"); \
     sv_2mortal(SvREFCNT_inc(SvRV(sv)))
 
+/* Re-read the handle after a call that can run Perl code (tied/overloaded
+ * argument magic).  EXTRACT_GRAPH's sv_2mortal(SvREFCNT_inc(...)) pin only
+ * blocks REFCOUNT-driven destruction; an explicit $obj->DESTROY frees the
+ * handle regardless and zeroes the IV, so the local `h` would dangle.
+ * That same Perl can also REPLACE the invocant (`$obj = 42` from an overload
+ * handler mutates ST(0), because Perl passes aliases), which is why SvROK is
+ * re-checked before SvRV -- otherwise SvRV would run on a non-reference. */
+#define REEXTRACT_GRAPH(sv) \
+    if (!SvROK(sv)) \
+        croak("Data::Graph::Shared object was replaced during the call"); \
+    h = INT2PTR(GraphHandle*, SvIV(SvRV(sv))); \
+    if (!h) croak("Data::Graph::Shared object destroyed during the call")
+
 /* Node ids are UV in the XS signature but uint32_t in the core. Reject an
  * out-of-range id instead of silently truncating it into a different, valid
  * node (the core only bounds the TRUNCATED value). Must be used before any
@@ -210,6 +223,7 @@ add_edge(self, src, dst, ...)
     GRAPH_CHECK_NODE(src, "add_edge");
     GRAPH_CHECK_NODE(dst, "add_edge");
     int64_t weight = (items > 3 && (SvGETMAGIC(ST(3)), SvOK(ST(3)))) ? (int64_t)SvIV(ST(3)) : 1;
+    REEXTRACT_GRAPH(self);   /* the weight's get-magic may have destroyed self */
     RETVAL = graph_add_edge(h, (uint32_t)src, (uint32_t)dst, weight);
   OUTPUT:
     RETVAL
