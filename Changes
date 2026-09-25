@@ -1,5 +1,17 @@
 Revision history for Data::Graph::Shared
 
+0.08      2026-09-26
+          - A writer killed mid add_node, add_edge or remove_node no longer
+            leaves a half-published node or an edge list through freed edges.
+          - Creating a segment reserves its space, so a full filesystem makes
+            the constructor croak instead of dying with SIGBUS;
+            DATA_GRAPH_SHARED_SPARSE=1 skips the reservation.
+          - A create that fails at mmap no longer leaves a full-size file
+            behind.
+          - Checking a file left by an interrupted create no longer allocates
+            its pages on tmpfs.
+          - Error messages no longer lose their reason to a long path.
+
 0.07      2026-09-15
           - Recover a lock left ownerless by a corrupt file instead of hanging.
 
